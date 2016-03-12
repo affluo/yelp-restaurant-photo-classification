@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import shutil 
 
 # Loading data using pandas
 
@@ -20,6 +21,7 @@ for j in photos_biz.index:
 # From the dictionary, create text files photo_id.jpg and 0 or 1 for each class
 text_file_list = ['0.txt','1.txt','2.txt','3.txt','4.txt','5.txt','6.txt','7.txt','8.txt']
 
+'''
 for j in range (9):
     text_file = open(text_file_list[j], "w")
     for i in photos_label:
@@ -30,5 +32,17 @@ for j in range (9):
            s = str(i) + '.jpg 0 \n'
            text_file.write (s)
     text_file.close()
+'''
+
+for j in range (9):
+    for i in photos_label:
+        src = '/Users/robsalz/Projects/data/yelp/train_photos/'+str(i) + '.jpg'
+        if str(j) in photos_label[i]:
+            dst = '/Users/robsalz/Projects/data/yelp/train_binary/label_'+str(j)+'/pos/'+str(i) + '.jpg'
+            shutil.copy2(src, dst)
+        else:
+            dst = '/Users/robsalz/Projects/data/yelp/train_binary/label_'+str(j)+'/neg/'+str(i) + '.jpg'
+            shutil.copy2(src, dst)
        
+          
      
