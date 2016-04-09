@@ -95,4 +95,22 @@ for biz_probs in prob_array_list:
     
 # Hot Encoding the labels:
 ###############################################################################
+#Sort this by business and reindex (These guys or cunts for giving csv out of order)
+biz_label = biz_label.sort(columns = 'business_id')
+biz_label.reset_index(drop=True)
+
+def hot_encode (label, num_classes=9):
+    '''Takes string of form '0 1 9' and returns a hot encoding'''
+    import numpy as np
+    hot_encoding = np.zeros(num_classes)
     
+    label = label.replace(" ", "")
+    for l in label:
+        l = int(l)
+        hot_encoding[l] = 1
+    return hot_encoding
+    
+hot_labels = []
+for label in biz_label['labels']:
+    hot_label = hot_encode(label)
+    hot_labels.append(hot_label)
