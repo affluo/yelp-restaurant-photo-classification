@@ -2,6 +2,8 @@ import pandas as pd
 #First need to create 9 text files representing label probabilites for each photo
 import pandas as pd
 import numpy as np
+import tensorflow as tf
+
 
 # Loading data using pandas
 
@@ -15,11 +17,10 @@ biz_label = pd.read_csv('~/Projects/data/yelp/train.csv')
 biz_label['labels']=biz_label['labels'].replace(np.nan,' ', regex=True)
 
 # Create a dictionary with photo_id as the key and labels as the value
-photos_label = {}
-for j in photos_biz.index:
-    photos_label[photos_biz['photo_id'][j]] = biz_label['labels'][biz_label['business_id'][biz_label['business_id'] == photos_biz['business_id'][j]].index[0]]
-
-
+#photos_label = {}
+#for j in photos_biz.index:
+#    photos_label[photos_biz['photo_id'][j]] = biz_label['labels'][biz_label['business_id'][biz_label['business_id'] == photos_biz['business_id'][j]].index[0]]
+#
 #Writing a dummy csv file
 # Create a dictionary with photo_id as the key and labels as the value
 #photos_label = {}
@@ -34,7 +35,8 @@ for j in photos_biz.index:
 #    text_file.close()
 
 #Read in the CSV to prob datafram
-prob = pd.read_csv('~/Projects/yelp/prob.csv')
+prob = pd.read_csv('~/Projects/yelp/Yelp_probs.csv')
+prob['photo_id'] = prob['photo_id'].str.replace('.jpg', '')
 prob = prob.sort('photo_id') #Sort by photo
 prob = prob.reset_index(drop=True)
 
@@ -42,6 +44,9 @@ prob = prob.reset_index(drop=True)
 prob_biz = photos_biz.sort(columns = 'photo_id') #Sort by photo first
 prob_biz = prob_biz.reset_index(drop=True)  #Re - index the dataframe
 prob['business_id']= prob_biz['business_id']
+
+#Drop photos that don't have a business ID
+prob = prob.dropna()
 
 #Sort by business, and reindex the dataframe
 prob = prob.sort(columns = 'business_id')
@@ -52,7 +57,8 @@ prob = prob.reset_index(drop = True)
 # Iterate through each class
 # Will work with one class at store the stats in all_stats
 all_stats = []
-for cls in xrange (9):              
+for cls in xrange (9):  
+            
     # Create an empty list to store the class probabilities for each business in      
     prob_list = []
     for i in biz_label.index:
@@ -61,9 +67,9 @@ for cls in xrange (9):
     # Iterate through sorted dataframe, and apend probability to each businesses empty list    
     biz = 0
     for i in prob.index:
-        prob_list[biz].append(prob['prob'+str(cls)][i])
         if i == len(prob)-1:
             break
+        prob_list[biz].append(prob['prob'+str(cls)][i])
         if prob['business_id'][i] != prob['business_id'][i+1]:
             biz = biz + 1;
         
@@ -80,7 +86,7 @@ for cls in xrange (9):
     biz_stats_list = []
     for biz_probs in prob_array_list:
         biz_max = np.amax(biz_probs)
-        biz_min = np.amin(biz_probs)
+        biz_min = 1-np.amin(biz_probs)
         biz_mean = np.mean(biz_probs)
         biz_std = np.std(biz_probs)
         biz_no_photos = float(len(biz_probs))/max_photos
@@ -121,3 +127,38 @@ for label in biz_label['labels']:
 
 #Hot labels as an array
 hot_labels_asarray = np.asarray(hot_labels)
+
+#Train the classifier
+
+#Define number of hidden units
+hidden_units = 50
+
+x_ = tf.placeholder(tf.float32,shape=[2000,45],name = "x-input")
+y_ = tf.placeholder(tf.float32,shape=[2000,9],name = "y-input")
+
+Theta1 = tf.Variable(tf.random_uniform([45,hidden_units], -1, 1), name="Theta1")
+Theta2 = tf.Variable(tf.random_uniform([hidden_units,9], -1, 1), name="Theta2")
+
+Bias1 = tf.Variable(tf.zeros([hidden_units]), name="Bias1")
+Bias2 = tf.Variable(tf.zeros([9]), name="Bias2")
+
+A2 = tf.sigmoid(tf.matmul(x_, Theta1) + Bias1)
+Hypothesis = tf.sigmoid(tf.matmul(A2, Theta2) + Bias2)
+
+cost = tf.reduce_mean(( (y_ * tf.log(Hypothesis)) + 
+        ((1 - y_) * tf.log(1.0 - Hypothesis)) ) * -1)
+        
+train_step = tf.train.GradientDescentOptimizer(0.01).minimize(cost)
+
+init = tf.initialize_all_variables()
+sess = tf.Session()
+sess.run(init)
+
+for i in range(100000):
+        sess.run(train_step, feed_dict={x_: input_vectors_asarray, y_: hot_labels_asarray})
+
+if i % 1000 == 0:
+        print('Epoch ', i)
+        print('cost ', sess.run(cost, feed_dict={x_: input_vectors_asarray, y_: hot_labels_asarray}))
+
+#writer = tf.train.SummaryWriter("./logs/xor_logsss.graph_def)
